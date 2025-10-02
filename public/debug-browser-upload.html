@@ -1,0 +1,245 @@
+<!--
+/**
+ * 文件名: debug-browser-upload.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 浏览器端文件上传调试页面，用于诊断上传问题
+ * 
+ * 调试功能:
+ * - 文件上传详细日志
+ * - 网络请求监控
+ * - 错误信息捕获
+ * - 浏览器兼容性测试
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建浏览器端上传调试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浏览器上传调试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; font-size: 11px; max-height: 500px; overflow-y: auto; white-space: pre-wrap; }
+        input, select { margin: 5px; padding: 8px; width: 300px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        .file-info { background: #e9ecef; padding: 10px; margin: 5px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>浏览器上传调试工具</h1>
+    
+    <div class="section">
+        <h2>登录</h2>
+        <button onclick="login()">自动登录</button>
+        <div id="loginStatus">未登录</div>
+    </div>
+
+    <div class="section">
+        <h2>文件上传调试</h2>
+        <input type="file" id="fileInput" multiple accept="image/*,.zip,.rar,.7z">
+        <select id="merchantSelect">
+            <option value="5">sj1111</option>
+        </select>
+        <button onclick="debugUpload()">调试上传</button>
+        <div id="fileInfo"></div>
+    </div>
+
+    <div class="section">
+        <h2>详细调试日志</h2>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="debugLog" class="log">等待操作...</div>
+    </div>
+
+    <script>
+        let authToken = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            let prefix = '';
+            
+            switch(type) {
+                case 'error': prefix = '❌'; break;
+                case 'success': prefix = '✅'; break;
+                case 'warning': prefix = '⚠️'; break;
+                default: prefix = 'ℹ️'; break;
+            }
+            
+            logDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '日志已清空\n';
+        }
+        
+        async function login() {
+            try {
+                log('开始登录...');
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: '111111', password: '111111' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    document.getElementById('loginStatus').innerHTML = '<span style="color: green;">已登录</span>';
+                    log('登录成功', 'success');
+                } else {
+                    log(`登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`登录网络错误: ${error.message}`, 'error');
+            }
+        }
+        
+        async function debugUpload() {
+            if (!authToken) {
+                log('请先登录', 'error');
+                return;
+            }
+            
+            const fileInput = document.getElementById('fileInput');
+            const files = Array.from(fileInput.files);
+            
+            if (files.length === 0) {
+                log('请选择文件', 'error');
+                return;
+            }
+            
+            const merchantId = document.getElementById('merchantSelect').value;
+            
+            log(`=== 开始调试上传 ===`);
+            log(`文件数量: ${files.length}`);
+            log(`商家ID: ${merchantId}`);
+            
+            // 显示文件详细信息
+            let fileInfoHtml = '<h4>文件详细信息:</h4>';
+            files.forEach((file, index) => {
+                log(`文件 ${index + 1}:`);
+                log(`  名称: ${file.name}`);
+                log(`  大小: ${file.size} bytes (${(file.size / 1024).toFixed(2)} KB)`);
+                log(`  MIME类型: ${file.type || '未知'}`);
+                log(`  最后修改: ${new Date(file.lastModified).toLocaleString()}`);
+                
+                fileInfoHtml += `
+                    <div class="file-info">
+                        <strong>${file.name}</strong><br>
+                        大小: ${file.size} bytes (${(file.size / 1024).toFixed(2)} KB)<br>
+                        MIME: ${file.type || '未知'}<br>
+                        修改时间: ${new Date(file.lastModified).toLocaleString()}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('fileInfo').innerHTML = fileInfoHtml;
+            
+            // 创建FormData
+            log('创建FormData...');
+            const formData = new FormData();
+            
+            files.forEach((file, index) => {
+                log(`添加文件到FormData: ${file.name}`);
+                formData.append('files', file);
+            });
+            
+            formData.append('merchantId', merchantId);
+            formData.append('remarks', '浏览器调试上传');
+            
+            log('FormData创建完成');
+            
+            // 发送请求
+            try {
+                log('发送上传请求...');
+                
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                        // 注意：不要手动设置Content-Type，让浏览器自动设置multipart boundary
+                    },
+                    body: formData
+                });
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                log(`请求完成，耗时: ${duration}ms`);
+                log(`响应状态: ${response.status} ${response.statusText}`);
+                log(`响应Content-Type: ${response.headers.get('content-type')}`);
+                
+                // 获取响应内容
+                let responseText;
+                try {
+                    responseText = await response.text();
+                    log(`响应内容长度: ${responseText.length} 字符`);
+                    log(`响应内容: ${responseText}`);
+                } catch (textError) {
+                    log(`读取响应内容失败: ${textError.message}`, 'error');
+                    return;
+                }
+                
+                // 尝试解析JSON
+                if (response.ok) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        log(`上传成功: ${result.files.length} 个文件`, 'success');
+                        result.files.forEach(file => {
+                            log(`  - ${file.originalName} -> ${file.fileName}`, 'success');
+                        });
+                    } catch (parseError) {
+                        log(`JSON解析失败: ${parseError.message}`, 'error');
+                    }
+                } else {
+                    log(`上传失败 (${response.status})`, 'error');
+                    
+                    // 检查是否是HTML错误页面
+                    if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
+                        log('服务器返回HTML错误页面，可能是内部错误', 'error');
+                        
+                        // 尝试提取错误信息
+                        const titleMatch = responseText.match(/<title>(.*?)<\/title>/i);
+                        if (titleMatch) {
+                            log(`错误页面标题: ${titleMatch[1]}`, 'error');
+                        }
+                        
+                        const bodyMatch = responseText.match(/<body[^>]*>(.*?)<\/body>/is);
+                        if (bodyMatch) {
+                            const bodyText = bodyMatch[1].replace(/<[^>]*>/g, '').trim();
+                            log(`错误页面内容: ${bodyText.substring(0, 200)}`, 'error');
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                log(`网络请求失败: ${error.message}`, 'error');
+                log(`错误类型: ${error.constructor.name}`, 'error');
+                if (error.stack) {
+                    log(`错误堆栈: ${error.stack}`, 'error');
+                }
+            }
+            
+            log(`=== 调试上传结束 ===`);
+        }
+        
+        // 页面加载时自动登录
+        window.addEventListener('load', () => {
+            log('页面加载完成');
+            login();
+        });
+    </script>
+</body>
+</html>

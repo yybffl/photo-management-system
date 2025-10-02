@@ -1,0 +1,187 @@
+<!--
+/**
+ * 文件名: debug-upload-issue.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 上传问题专项调试页面，针对特定上传问题进行诊断
+ * 
+ * 调试目标:
+ * - 压缩文件上传失败问题
+ * - 500错误原因分析
+ * - 文件类型识别问题
+ * - 网络连接问题诊断
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建上传问题专项调试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传问题调试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        input, select { margin: 5px; padding: 8px; width: 300px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>上传问题调试工具</h1>
+    
+    <div class="section">
+        <h2>登录</h2>
+        <input type="text" id="username" value="111111" placeholder="用户名">
+        <input type="password" id="password" value="111111" placeholder="密码">
+        <button onclick="login()">登录</button>
+        <div id="loginStatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>文件上传测试</h2>
+        <input type="file" id="fileInput" multiple accept="image/*,.zip,.rar,.7z">
+        <select id="merchantSelect">
+            <option value="5">sj1111</option>
+        </select>
+        <button onclick="uploadFiles()">上传文件</button>
+        <div id="uploadStatus"></div>
+    </div>
+
+    <div class="section">
+        <h2>详细日志</h2>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="debugLog" class="log"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            document.getElementById('debugLog').innerHTML = '';
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            log('开始登录...');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    document.getElementById('loginStatus').innerHTML = '<span class="success">登录成功</span>';
+                    log('登录成功', 'success');
+                } else {
+                    document.getElementById('loginStatus').innerHTML = '<span class="error">登录失败</span>';
+                    log(`登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`登录网络错误: ${error.message}`, 'error');
+            }
+        }
+        
+        async function uploadFiles() {
+            if (!authToken) {
+                log('请先登录', 'error');
+                return;
+            }
+            
+            const fileInput = document.getElementById('fileInput');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                log('请选择文件', 'error');
+                return;
+            }
+            
+            const merchantId = document.getElementById('merchantSelect').value;
+            
+            log(`准备上传 ${files.length} 个文件`);
+            
+            // 显示文件信息
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                log(`文件 ${i + 1}: ${file.name}, 大小: ${file.size} bytes, MIME: ${file.type}`);
+            }
+            
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            formData.append('merchantId', merchantId);
+            formData.append('remarks', '调试测试上传');
+            
+            try {
+                log('发送上传请求...');
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+                
+                log(`上传响应状态: ${response.status}`);
+                log(`上传响应Content-Type: ${response.headers.get('content-type')}`);
+                
+                // 先获取原始文本
+                const responseText = await response.text();
+                log(`上传响应原始内容: ${responseText}`);
+                
+                // 尝试解析JSON
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    log('JSON解析成功', 'success');
+                } catch (parseError) {
+                    log(`JSON解析失败: ${parseError.message}`, 'error');
+                    document.getElementById('uploadStatus').innerHTML = '<span class="error">JSON解析失败 - 这可能是"网络错误"的原因</span>';
+                    return;
+                }
+                
+                if (response.ok) {
+                    document.getElementById('uploadStatus').innerHTML = '<span class="success">上传成功</span>';
+                    log(`上传成功: ${result.files.length} 个文件`, 'success');
+                } else {
+                    document.getElementById('uploadStatus').innerHTML = '<span class="error">上传失败</span>';
+                    log(`上传失败: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`上传网络错误: ${error.message}`, 'error');
+                log(`错误类型: ${error.constructor.name}`, 'error');
+                log(`错误堆栈: ${error.stack}`, 'error');
+                document.getElementById('uploadStatus').innerHTML = '<span class="error">网络错误 - 这就是您看到的错误</span>';
+            }
+        }
+        
+        // 页面加载时自动登录
+        window.addEventListener('load', () => {
+            log('页面加载完成');
+            login();
+        });
+    </script>
+</body>
+</html>

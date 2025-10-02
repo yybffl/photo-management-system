@@ -1,0 +1,42 @@
+{
+  "name": "photo-management-system",
+  "version": "1.1.0",
+  "description": "照片管理系统 - 云端部署版本",
+  "main": "server-cloud.js",
+  "scripts": {
+    "start": "node server-cloud.js",
+    "dev": "nodemon server-cloud.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "photo",
+    "management",
+    "upload",
+    "download",
+    "express",
+    "postgresql"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "multer": "^1.4.5-lts.1",
+    "fs-extra": "^11.1.1",
+    "archiver": "^6.0.1",
+    "aws-sdk": "^2.1490.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

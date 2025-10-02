@@ -1,0 +1,196 @@
+<!--
+/**
+ * 文件名: simple-test.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 简化功能测试页面，用于快速验证核心功能
+ * 
+ * 测试范围:
+ * - 登录注册基础流程
+ * - 简单API调用测试
+ * - 基础UI交互验证
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建简化测试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单测试 - 用户管理系统</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>简单功能测试</h1>
+    
+    <h2>基础测试</h2>
+    <button onclick="testBasic()">测试基础JavaScript</button>
+    <button onclick="testDOM()">测试DOM操作</button>
+    <button onclick="testEvents()">测试事件系统</button>
+    
+    <h2>网络测试</h2>
+    <button onclick="testServer()">测试服务器</button>
+    <button onclick="testLogin()">测试登录</button>
+    
+    <h2>快速操作</h2>
+    <button onclick="doLogin()">执行登录</button>
+    <button onclick="doLogout()">执行退出</button>
+    <button onclick="clearAll()">清除所有数据</button>
+    
+    <div id="output" class="result">点击上方按钮开始测试...</div>
+
+    <script>
+        function output(message, type = 'info') {
+            const div = document.getElementById('output');
+            const className = type === 'error' ? 'result error' : type === 'success' ? 'result success' : 'result';
+            div.className = className;
+            div.innerHTML = message;
+            console.log(message);
+        }
+
+        function testBasic() {
+            try {
+                const test = { a: 1, b: 2 };
+                const arr = [1, 2, 3];
+                const func = () => 'hello';
+                
+                output('✅ 基础JavaScript功能正常', 'success');
+            } catch (error) {
+                output(`❌ 基础JavaScript错误: ${error.message}`, 'error');
+            }
+        }
+
+        function testDOM() {
+            try {
+                const div = document.createElement('div');
+                div.textContent = 'test';
+                document.body.appendChild(div);
+                document.body.removeChild(div);
+                
+                const output_el = document.getElementById('output');
+                if (output_el) {
+                    output('✅ DOM操作正常', 'success');
+                } else {
+                    output('❌ DOM查询失败', 'error');
+                }
+            } catch (error) {
+                output(`❌ DOM操作错误: ${error.message}`, 'error');
+            }
+        }
+
+        function testEvents() {
+            try {
+                const btn = document.createElement('button');
+                let clicked = false;
+                
+                btn.addEventListener('click', () => {
+                    clicked = true;
+                });
+                
+                btn.click();
+                
+                if (clicked) {
+                    output('✅ 事件系统正常', 'success');
+                } else {
+                    output('❌ 事件系统失败', 'error');
+                }
+            } catch (error) {
+                output(`❌ 事件系统错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testServer() {
+            try {
+                output('正在测试服务器连接...');
+                const response = await fetch('/');
+                
+                if (response.ok) {
+                    output('✅ 服务器连接正常', 'success');
+                } else {
+                    output(`❌ 服务器响应错误: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                output(`❌ 服务器连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            try {
+                output('正在测试登录API...');
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output(`✅ 登录API正常<br>用户: ${data.user.username}<br>角色: ${data.user.role}`, 'success');
+                } else {
+                    output(`❌ 登录API失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                output(`❌ 登录API错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function doLogin() {
+            try {
+                output('正在执行登录...');
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    output('✅ 登录成功，令牌已保存<br><a href="/">进入主系统</a>', 'success');
+                } else {
+                    output(`❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                output(`❌ 登录错误: ${error.message}`, 'error');
+            }
+        }
+
+        function doLogout() {
+            localStorage.removeItem('authToken');
+            output('✅ 已清除登录状态', 'success');
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            output('✅ 已清除所有本地数据', 'success');
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            output('页面加载完成，可以开始测试');
+        });
+    </script>
+</body>
+</html>

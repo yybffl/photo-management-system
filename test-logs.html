@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试日志格式</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>测试操作日志格式</h1>
+    
+    <button onclick="testRegister()">测试客户注册</button>
+    <button onclick="testLogin()">测试登录</button>
+    <button onclick="testCreateUser()">测试管理员创建用户</button>
+    <button onclick="testToggleUser()">测试禁用/启用用户</button>
+    
+    <div id="result" class="result">点击按钮测试不同操作的日志格式...</div>
+
+    <script>
+        let authToken = null;
+
+        function showResult(message) {
+            document.getElementById('result').innerHTML = message;
+        }
+
+        async function testRegister() {
+            try {
+                showResult('正在测试客户注册...');
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'testcustomer' + Date.now(),
+                        password: '123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ 客户注册成功！<br>用户ID: ${data.user.id}<br>用户名: ${data.user.username}<br>现在可以查看操作记录中的日志格式`);
+                } else {
+                    showResult(`❌ 注册失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult(`❌ 网络错误: ${error.message}`);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                showResult('正在测试管理员登录...');
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    showResult(`✅ 登录成功！<br>用户: ${data.user.username}<br>令牌已保存，现在可以测试管理员操作`);
+                } else {
+                    showResult(`❌ 登录失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult(`❌ 网络错误: ${error.message}`);
+            }
+        }
+
+        async function testCreateUser() {
+            if (!authToken) {
+                showResult('❌ 请先登录获取管理员权限');
+                return;
+            }
+
+            try {
+                showResult('正在测试创建用户...');
+                const username = 'testmerchant' + Date.now();
+                const response = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: '123456',
+                        role: 'merchant'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ 用户创建成功！<br>用户ID: ${data.user.id}<br>用户名: ${data.user.username}<br>角色: ${data.user.role}<br>现在可以查看操作记录中的详细日志`);
+                } else {
+                    showResult(`❌ 创建失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult(`❌ 网络错误: ${error.message}`);
+            }
+        }
+
+        async function testToggleUser() {
+            if (!authToken) {
+                showResult('❌ 请先登录获取管理员权限');
+                return;
+            }
+
+            try {
+                showResult('正在测试禁用用户...');
+                // 假设禁用用户ID为2的用户
+                const response = await fetch('/api/admin/users/2/status', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: 'disabled',
+                        reason: '测试禁用功能'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ 用户状态更新成功！<br>${data.message}<br>现在可以查看操作记录中包含用户名和ID的详细日志`);
+                } else {
+                    showResult(`❌ 操作失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult(`❌ 网络错误: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

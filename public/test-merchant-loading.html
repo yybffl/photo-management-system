@@ -1,0 +1,170 @@
+<!--
+/**
+ * 文件名: test-merchant-loading.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 商家信息加载测试页面，调试商家下拉框加载问题
+ * 
+ * 测试内容:
+ * - 商家列表API调用
+ * - 下拉框数据填充
+ * - 加载状态显示
+ * - 错误处理机制
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建商家加载测试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商家加载测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        input, select { margin: 5px; padding: 8px; width: 300px; }
+        .console-log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>商家加载功能测试</h1>
+    
+    <div class="test-section">
+        <h2>🔑 登录测试</h2>
+        <input type="text" id="username" placeholder="用户名" value="111111">
+        <input type="password" id="password" placeholder="密码" value="111111">
+        <button onclick="loginTest()">登录</button>
+        <div id="loginResult" class="result">点击登录按钮...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>🏪 商家列表测试</h2>
+        <button onclick="loadMerchantsTest()">加载商家列表</button>
+        <div id="merchantsResult" class="result">需要先登录</div>
+        <select id="merchantSelect">
+            <option value="">请先加载商家列表</option>
+        </select>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 控制台日志</h2>
+        <div id="consoleLog" class="console-log">等待操作...</div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let authToken = null;
+        let currentUser = null;
+
+        function log(message) {
+            console.log(message);
+            const logDiv = document.getElementById('consoleLog');
+            logDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function showResult(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = 'result ' + type;
+        }
+
+        async function loginTest() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            log(`开始登录: ${username}`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                log(`登录响应状态: ${response.status}`);
+                log(`登录响应数据: ${JSON.stringify(data)}`);
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    showResult('loginResult', `✅ 登录成功！<br>用户: ${data.user.username}<br>角色: ${data.user.role}`, 'success');
+                    log(`✓ 登录成功，token已保存`);
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                    log(`✗ 登录失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+                log(`✗ 网络错误: ${error.message}`);
+            }
+        }
+
+        async function loadMerchantsTest() {
+            if (!authToken) {
+                showResult('merchantsResult', '❌ 请先登录', 'error');
+                log('✗ 未登录，无法加载商家');
+                return;
+            }
+
+            log('开始加载商家列表...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/merchants`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                log(`商家API响应状态: ${response.status}`);
+                
+                const data = await response.json();
+                log(`商家API响应数据: ${JSON.stringify(data)}`);
+                
+                if (response.ok) {
+                    const select = document.getElementById('merchantSelect');
+                    
+                    // 清空现有选项
+                    select.innerHTML = '<option value="">请选择商家</option>';
+                    log(`清空下拉框，准备添加${data.merchants.length}个商家`);
+                    
+                    // 添加商家选项
+                    data.merchants.forEach((merchant, index) => {
+                        const option = document.createElement('option');
+                        option.value = merchant.id;
+                        option.textContent = merchant.username;
+                        select.appendChild(option);
+                        log(`添加商家选项 ${index + 1}: ${merchant.username} (ID: ${merchant.id})`);
+                    });
+                    
+                    showResult('merchantsResult', 
+                        `✅ 加载商家成功！<br>商家数量: ${data.merchants.length}`, 
+                        'success'
+                    );
+                    log(`✓ 商家列表加载完成`);
+                } else {
+                    showResult('merchantsResult', `❌ 加载失败: ${data.error}`, 'error');
+                    log(`✗ 加载失败: ${data.error}`);
+                }
+            } catch (error) {
+                showResult('merchantsResult', `❌ 网络错误: ${error.message}`, 'error');
+                log(`✗ 网络错误: ${error.message}`);
+            }
+        }
+
+        // 页面加载时的初始化
+        window.addEventListener('load', () => {
+            log('页面加载完成，准备测试');
+        });
+    </script>
+</body>
+</html>

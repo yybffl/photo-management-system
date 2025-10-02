@@ -1,0 +1,295 @@
+<!--
+/**
+ * 文件名: test-file-types.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 文件类型支持测试页面，验证各种文件格式的上传支持
+ * 
+ * 测试类型:
+ * - 图片文件: JPG, PNG, GIF, WebP
+ * - 压缩文件: ZIP, RAR, 7Z
+ * - 文件大小限制测试
+ * - MIME类型验证测试
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建文件类型测试页面
+ * - 2025/10/02: 添加多种文件格式支持测试
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件类型支持测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        input, select { margin: 5px; padding: 8px; width: 300px; }
+        .file-test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: white; }
+        .file-info { font-family: monospace; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>文件类型支持测试</h1>
+    
+    <div class="test-section">
+        <h2>🔑 登录</h2>
+        <input type="text" id="username" placeholder="用户名" value="111111">
+        <input type="password" id="password" placeholder="密码" value="111111">
+        <button onclick="login()">登录</button>
+        <div id="loginResult" class="result">点击登录...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>📁 文件类型验证测试</h2>
+        <input type="file" id="fileInput" multiple accept="image/*,.zip,.rar,.7z">
+        <div id="fileValidation" class="result">请选择文件进行测试...</div>
+        <div id="fileDetails"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🏪 商家选择</h2>
+        <select id="merchantSelect">
+            <option value="">请先登录后加载商家</option>
+        </select>
+        <button onclick="loadMerchants()">加载商家</button>
+    </div>
+
+    <div class="test-section">
+        <h2>⬆️ 文件上传测试</h2>
+        <button onclick="uploadFiles()">上传选中的文件</button>
+        <div id="uploadResult" class="result">请先选择文件和商家...</div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let authToken = null;
+        let selectedFiles = [];
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    showResult('loginResult', `✅ 登录成功！用户: ${data.user.username}`, 'success');
+                    loadMerchants();
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadMerchants() {
+            if (!authToken) {
+                showResult('loginResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/merchants`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const select = document.getElementById('merchantSelect');
+                    select.innerHTML = '<option value="">请选择商家</option>';
+                    
+                    data.merchants.forEach(merchant => {
+                        const option = document.createElement('option');
+                        option.value = merchant.id;
+                        option.textContent = merchant.username;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载商家失败:', error);
+            }
+        }
+
+        // 文件类型检查函数（与主页面相同）
+        function isImageFile(file) {
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+            const imageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            
+            const ext = getFileExtension(file.name);
+            return file.type.startsWith('image/') || imageMimeTypes.includes(file.type) || imageExtensions.includes(ext);
+        }
+
+        function isArchiveFile(file) {
+            const archiveExtensions = ['.zip', '.rar', '.7z'];
+            const archiveMimeTypes = [
+                'application/zip', 
+                'application/x-zip-compressed',
+                'application/x-rar-compressed', 
+                'application/vnd.rar',
+                'application/x-rar',
+                'application/x-7z-compressed'
+            ];
+            
+            const ext = getFileExtension(file.name);
+            return archiveMimeTypes.includes(file.type) || archiveExtensions.includes(ext);
+        }
+
+        function getFileExtension(filename) {
+            return filename.toLowerCase().substring(filename.lastIndexOf('.'));
+        }
+
+        function validateFiles(files) {
+            const maxFiles = 20;
+            const maxImageSize = 50 * 1024 * 1024; // 50MB
+            
+            if (files.length > maxFiles) {
+                return { valid: false, message: `最多只能选择${maxFiles}个文件` };
+            }
+            
+            let imageCount = 0;
+            let totalImageSize = 0;
+            
+            for (const file of files) {
+                const isImage = isImageFile(file);
+                const isArchive = isArchiveFile(file);
+                
+                if (!isImage && !isArchive) {
+                    return { valid: false, message: `不支持的文件类型: ${file.name}` };
+                }
+                
+                if (isImage) {
+                    imageCount++;
+                    totalImageSize += file.size;
+                }
+            }
+            
+            if (imageCount > maxFiles) {
+                return { valid: false, message: `图片文件不能超过${maxFiles}张` };
+            }
+            
+            if (totalImageSize > maxImageSize) {
+                return { valid: false, message: `图片文件总大小不能超过50MB` };
+            }
+            
+            return { valid: true };
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showResult(elementId, message, type = '') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = 'result ' + type;
+        }
+
+        // 文件选择事件
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            selectedFiles = files;
+            
+            if (files.length === 0) {
+                showResult('fileValidation', '请选择文件进行测试...');
+                document.getElementById('fileDetails').innerHTML = '';
+                return;
+            }
+            
+            // 验证文件
+            const validation = validateFiles(files);
+            if (validation.valid) {
+                showResult('fileValidation', `✅ 文件验证通过！共${files.length}个文件`, 'success');
+            } else {
+                showResult('fileValidation', `❌ ${validation.message}`, 'error');
+            }
+            
+            // 显示文件详情
+            let detailsHtml = '<h4>文件详情:</h4>';
+            files.forEach((file, index) => {
+                const isImage = isImageFile(file);
+                const isArchive = isArchiveFile(file);
+                const ext = getFileExtension(file.name);
+                
+                detailsHtml += `
+                    <div class="file-test">
+                        <strong>${file.name}</strong><br>
+                        <div class="file-info">
+                            大小: ${formatFileSize(file.size)}<br>
+                            MIME类型: ${file.type || '未知'}<br>
+                            扩展名: ${ext}<br>
+                            类型判断: ${isImage ? '图片' : (isArchive ? '压缩包' : '不支持')}
+                            ${isImage ? ' 🖼️' : (isArchive ? ' 📦' : ' ❌')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('fileDetails').innerHTML = detailsHtml;
+        });
+
+        async function uploadFiles() {
+            if (!authToken) {
+                showResult('uploadResult', '❌ 请先登录', 'error');
+                return;
+            }
+            
+            if (selectedFiles.length === 0) {
+                showResult('uploadResult', '❌ 请选择文件', 'error');
+                return;
+            }
+            
+            const merchantId = document.getElementById('merchantSelect').value;
+            if (!merchantId) {
+                showResult('uploadResult', '❌ 请选择商家', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            formData.append('merchantId', merchantId);
+            formData.append('remarks', '文件类型测试上传');
+            
+            try {
+                showResult('uploadResult', '⏳ 上传中...', '');
+                
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('uploadResult', 
+                        `✅ 上传成功！<br>上传了${result.files.length}个文件到商家: ${result.merchant}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('uploadResult', `❌ 上传失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('uploadResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

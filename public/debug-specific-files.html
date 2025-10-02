@@ -1,0 +1,270 @@
+<!--
+/**
+ * 文件名: debug-specific-files.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 特定文件调试页面，针对特定文件类型的上传问题进行调试
+ * 
+ * 调试目标:
+ * - 特定文件格式问题
+ * - 文件名特殊字符处理
+ * - 文件大小限制测试
+ * - MIME类型检测问题
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建特定文件调试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特定文件上传调试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        input, select { margin: 5px; padding: 8px; width: 300px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        .file-info { background: #e9ecef; padding: 10px; margin: 5px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>特定文件上传调试工具</h1>
+    
+    <div class="section">
+        <h2>登录状态</h2>
+        <button onclick="login()">登录</button>
+        <div id="loginStatus">未登录</div>
+    </div>
+
+    <div class="section">
+        <h2>文件选择和分析</h2>
+        <input type="file" id="fileInput" multiple accept="image/*,.zip,.rar,.7z">
+        <select id="merchantSelect">
+            <option value="5">sj1111</option>
+        </select>
+        <button onclick="analyzeFiles()">分析选中的文件</button>
+        <button onclick="uploadFiles()">上传文件</button>
+        <div id="fileAnalysis"></div>
+    </div>
+
+    <div class="section">
+        <h2>详细调试日志</h2>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="debugLog" class="log"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let selectedFiles = [];
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            let className = '';
+            let prefix = 'ℹ️';
+            
+            switch(type) {
+                case 'error': className = 'error'; prefix = '❌'; break;
+                case 'success': className = 'success'; prefix = '✅'; break;
+                case 'warning': className = 'warning'; prefix = '⚠️'; break;
+            }
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${prefix} ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('debugLog').innerHTML = '';
+        }
+        
+        async function login() {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: '111111', password: '111111' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    document.getElementById('loginStatus').innerHTML = '<span class="success">已登录</span>';
+                    log('登录成功', 'success');
+                } else {
+                    document.getElementById('loginStatus').innerHTML = '<span class="error">登录失败</span>';
+                    log(`登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`登录网络错误: ${error.message}`, 'error');
+            }
+        }
+        
+        // 文件类型检查函数（与主页面相同）
+        function isImageFile(file) {
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+            const imageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            
+            const ext = getFileExtension(file.name);
+            return file.type.startsWith('image/') || imageMimeTypes.includes(file.type) || imageExtensions.includes(ext);
+        }
+
+        function isArchiveFile(file) {
+            const archiveExtensions = ['.zip', '.rar', '.7z'];
+            const archiveMimeTypes = [
+                'application/zip', 
+                'application/x-zip-compressed',
+                'application/x-rar-compressed', 
+                'application/vnd.rar',
+                'application/x-rar',
+                'application/x-7z-compressed'
+            ];
+            
+            const ext = getFileExtension(file.name);
+            return archiveMimeTypes.includes(file.type) || archiveExtensions.includes(ext);
+        }
+
+        function getFileExtension(filename) {
+            return filename.toLowerCase().substring(filename.lastIndexOf('.'));
+        }
+        
+        function analyzeFiles() {
+            const fileInput = document.getElementById('fileInput');
+            const files = Array.from(fileInput.files);
+            selectedFiles = files;
+            
+            if (files.length === 0) {
+                document.getElementById('fileAnalysis').innerHTML = '<div class="warning">请选择文件</div>';
+                return;
+            }
+            
+            log(`开始分析 ${files.length} 个文件`);
+            
+            let analysisHtml = '<h3>文件分析结果:</h3>';
+            
+            files.forEach((file, index) => {
+                const isImage = isImageFile(file);
+                const isArchive = isArchiveFile(file);
+                const ext = getFileExtension(file.name);
+                
+                let typeResult = '❌ 不支持';
+                let typeClass = 'error';
+                
+                if (isImage) {
+                    typeResult = '✅ 图片文件';
+                    typeClass = 'success';
+                } else if (isArchive) {
+                    typeResult = '✅ 压缩包文件';
+                    typeClass = 'success';
+                }
+                
+                analysisHtml += `
+                    <div class="file-info">
+                        <strong>文件 ${index + 1}: ${file.name}</strong><br>
+                        <span class="${typeClass}">类型判断: ${typeResult}</span><br>
+                        文件大小: ${formatFileSize(file.size)}<br>
+                        MIME类型: ${file.type || '未知'}<br>
+                        扩展名: ${ext}<br>
+                        最后修改: ${new Date(file.lastModified).toLocaleString()}<br>
+                        图片检查: ${isImage ? '是' : '否'}<br>
+                        压缩包检查: ${isArchive ? '是' : '否'}
+                    </div>
+                `;
+                
+                log(`文件分析 - ${file.name}: 大小=${file.size}, MIME=${file.type}, 扩展名=${ext}, 类型=${typeResult}`);
+            });
+            
+            document.getElementById('fileAnalysis').innerHTML = analysisHtml;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        async function uploadFiles() {
+            if (!authToken) {
+                log('请先登录', 'error');
+                return;
+            }
+            
+            if (selectedFiles.length === 0) {
+                log('请先选择并分析文件', 'error');
+                return;
+            }
+            
+            const merchantId = document.getElementById('merchantSelect').value;
+            
+            log(`开始上传 ${selectedFiles.length} 个文件到商家 ${merchantId}`);
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+                log(`添加文件到FormData: ${file.name}`);
+            });
+            formData.append('merchantId', merchantId);
+            formData.append('remarks', '特定文件调试上传');
+            
+            try {
+                log('发送上传请求...');
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+                
+                log(`上传响应状态: ${response.status}`);
+                log(`上传响应Content-Type: ${response.headers.get('content-type')}`);
+                
+                const responseText = await response.text();
+                log(`上传响应原始内容: ${responseText.substring(0, 500)}...`);
+                
+                if (response.ok) {
+                    try {
+                        const result = JSON.parse(responseText);
+                        log(`上传成功: ${result.files.length} 个文件`, 'success');
+                        result.files.forEach(file => {
+                            log(`  - ${file.originalName} (${file.type})`, 'success');
+                        });
+                    } catch (parseError) {
+                        log(`JSON解析失败: ${parseError.message}`, 'error');
+                    }
+                } else {
+                    log(`上传失败 (${response.status})`, 'error');
+                    if (responseText.includes('<!DOCTYPE')) {
+                        log('服务器返回HTML页面，可能是内部错误', 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`上传网络错误: ${error.message}`, 'error');
+                log(`错误类型: ${error.constructor.name}`, 'error');
+            }
+        }
+        
+        // 文件选择事件
+        document.getElementById('fileInput').addEventListener('change', function() {
+            log('文件选择发生变化');
+            analyzeFiles();
+        });
+        
+        // 页面加载时自动登录
+        window.addEventListener('load', () => {
+            log('页面加载完成，自动登录');
+            login();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,700 @@
+<!--
+/**
+ * 文件名: index.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 宝格立印主页面，包含登录注册界面和管理后台
+ * 
+ * 功能模块:
+ * 1. 登录/注册界面 - 用户身份验证和新用户注册
+ * 2. 管理员后台 - 用户管理、操作日志查看
+ * 3. 客户文件管理 - 文件上传、列表查看、编辑删除
+ * 4. 响应式设计 - 支持PC、平板、手机等设备
+ * 
+ * 修改记录:
+ * - 2025/10/02: 初始创建，实现基础登录注册功能
+ * - 2025/10/02: 添加管理员后台界面，用户管理功能
+ * - 2025/10/02: 实现客户文件上传功能，支持图片和压缩包
+ * - 2025/10/02: 优化UI设计，添加文件操作按钮（编辑、删除、恢复）
+ * - 2025/10/02: 移除内联onclick事件，改用addEventListener绑定
+ * - 2025/10/02: 注释刷新按钮，用户习惯使用F5刷新
+ * - 2025/10/02: 添加文件说明注释
+ * - 2025/10/02: 为客户端和商家端添加筛选功能（按状态和时间筛选）
+ * - 2025/10/02: 完善筛选控件UI，包括自定义时间范围选择
+ * - 2025/10/02: 实现商家端批量下载功能，支持跨页选择和单文件/批量下载
+ * - 2025/10/02: 优化系统标题为"宝格立印"，更新品牌形象
+ * - 2025/10/02: 添加修改密码和找回密码功能，完善用户体验
+ * - 2025/10/02: 优化管理员操作记录页面，添加可搜索用户筛选和分页功能
+ * - 2025/10/03: 优化创建用户表单描述文字，移除冗余说明
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝格立印</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div id="loginPage" class="page active">
+        <div class="container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><i class="fas fa-print"></i> 宝格立印</h1>
+                    <p>请登录您的账户</p>
+                </div>
+                
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="loginUsername">
+                            <i class="fas fa-user"></i> 用户名
+                        </label>
+                        <input type="text" id="loginUsername" name="username" required 
+                               placeholder="请输入用户名" autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loginPassword">
+                            <i class="fas fa-lock"></i> 密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="loginPassword" name="password" required 
+                                   placeholder="请输入密码" autocomplete="current-password">
+                            <button type="button" class="toggle-password" data-target="loginPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                </form>
+                
+                <div class="auth-footer">
+                    <p>还没有账户？ <a href="#" id="showRegisterLink">注册</a></p>
+                    <p><a href="#" id="showChangePasswordLink">修改密码</a> | <a href="#" id="showForgotPasswordLink">找回密码</a></p>
+                </div>
+                
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码页面 -->
+    <div id="changePasswordPage" class="page">
+        <div class="container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><i class="fas fa-print"></i> 宝格立印</h1>
+                    <p>修改您的密码</p>
+                </div>
+                
+                <form id="changePasswordForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="changeUsername">
+                            <i class="fas fa-user"></i> 用户名
+                        </label>
+                        <input type="text" id="changeUsername" name="username" required 
+                               placeholder="请输入用户名" autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="oldPassword">
+                            <i class="fas fa-lock"></i> 旧密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="oldPassword" name="oldPassword" required 
+                                   placeholder="请输入旧密码" autocomplete="current-password">
+                            <button type="button" class="toggle-password" data-target="oldPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newPassword">
+                            <i class="fas fa-key"></i> 新密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="newPassword" name="newPassword" required 
+                                   placeholder="请输入新密码（至少6个字符）" autocomplete="new-password">
+                            <button type="button" class="toggle-password" data-target="newPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmNewPassword">
+                            <i class="fas fa-key"></i> 确认新密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="confirmNewPassword" name="confirmNewPassword" required 
+                                   placeholder="请再次输入新密码" autocomplete="new-password">
+                            <button type="button" class="toggle-password" data-target="confirmNewPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-key"></i> 修改密码
+                    </button>
+                </form>
+                
+                <div class="auth-footer">
+                    <p><a href="#" id="backToLoginFromChange">返回登录</a></p>
+                </div>
+                
+                <div id="changePasswordError" class="error-message"></div>
+                <div id="changePasswordSuccess" class="success-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 找回密码页面 -->
+    <div id="forgotPasswordPage" class="page">
+        <div class="container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><i class="fas fa-print"></i> 宝格立印</h1>
+                    <p>找回密码</p>
+                </div>
+                
+                <div class="forgot-password-content">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <h3>密码找回说明</h3>
+                        <p>如果您忘记了密码，请联系系统管理员找回密码。</p>
+                        <div class="contact-info">
+                            <p><strong>管理员邮箱：</strong></p>
+                            <p class="email"><i class="fas fa-envelope"></i> 1915316345@qq.com</p>
+                        </div>
+                        <p class="note">请在邮件中提供您的用户名和身份信息，管理员会尽快为您处理。</p>
+                    </div>
+                </div>
+                
+                <div class="auth-footer">
+                    <p><a href="#" id="backToLoginFromForgot">返回登录</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册页面 -->
+    <div id="registerPage" class="page">
+        <div class="container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1><i class="fas fa-print"></i> 宝格立印</h1>
+                    <p>创建您的客户账户</p>
+                </div>
+                
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="registerUsername">
+                            <i class="fas fa-user"></i> 用户名
+                        </label>
+                        <input type="text" id="registerUsername" name="username" required 
+                               placeholder="请输入用户名（3-20个字符）" autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerPassword">
+                            <i class="fas fa-lock"></i> 密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="registerPassword" name="password" required 
+                                   placeholder="请输入密码（至少6个字符）" autocomplete="new-password">
+                            <button type="button" class="toggle-password" data-target="registerPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock"></i> 确认密码
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="confirmPassword" name="confirmPassword" required 
+                                   placeholder="请再次输入密码" autocomplete="new-password">
+                            <button type="button" class="toggle-password" data-target="confirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                </form>
+                
+                <div class="auth-footer">
+                    <p>已有账户？ <a href="#" id="showLoginLink">立即登录</a></p>
+                </div>
+                
+                <div id="registerError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户主页 -->
+    <div id="dashboardPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-print"></i> 宝格立印
+            </div>
+            <div class="nav-menu">
+                <span id="userInfo" class="user-info"></span>
+                <button class="btn btn-outline" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </button>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <!-- 客户/商家面板 -->
+            <div id="userDashboard" class="dashboard-content">
+                <div class="welcome-card">
+                    <h2><i class="fas fa-home"></i> 欢迎回来！</h2>
+                    <p>您已成功登录系统</p>
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div>
+                                <span class="stat-label">注册时间</span>
+                                <span id="userCreatedAt" class="stat-value">-</span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <span class="stat-label">最后登录</span>
+                                <span id="userLastLogin" class="stat-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 客户文件上传功能 -->
+                <div id="customerUpload" class="upload-section" style="display: none;">
+                    <div class="section-header">
+                        <h3><i class="fas fa-cloud-upload-alt"></i> 文件上传</h3>
+                        <p class="section-description">支持图片和压缩包上传，图片最多20张，总大小不超过50MB</p>
+                    </div>
+
+                    <form id="uploadForm" class="upload-form">
+                        <div class="form-group">
+                            <label for="fileInput">
+                                <i class="fas fa-file"></i> 选择文件
+                            </label>
+                            <div class="file-input-container">
+                                <input type="file" id="fileInput" name="files" multiple 
+                                       accept="image/*,.zip,.rar,.7z" style="display: none;">
+                                <button type="button" class="custom-file-button" id="customFileButton">
+                                    <i class="fas fa-plus"></i> 选择文件
+                                </button>
+                                <div class="file-info">
+                                    <small>支持格式：图片（jpg, png, gif, webp）、压缩包（zip, rar, 7z）</small>
+                                </div>
+                                
+                                <!-- 已选择文件列表 -->
+                                <div id="selectedFilesList" class="selected-files-list" style="display: none;">
+                                    <div class="selected-files-header">
+                                        <span>已选择的文件：</span>
+                                    </div>
+                                    <div id="selectedFilesContent" class="selected-files-content">
+                                        <!-- 文件列表将在这里显示 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="merchantSelect">
+                                <i class="fas fa-store"></i> 选择商家
+                            </label>
+                            <select id="merchantSelect" name="merchantId" required>
+                                <option value="">请选择商家</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="remarksInput">
+                                <i class="fas fa-comment"></i> 备注信息（可选）
+                            </label>
+                            <textarea id="remarksInput" name="remarks" 
+                                      placeholder="请输入备注信息..." rows="3"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-upload"></i> 上传文件
+                        </button>
+                    </form>
+
+                    <div id="uploadError" class="error-message"></div>
+                    <div id="uploadSuccess" class="success-message"></div>
+                </div>
+
+                <!-- 文件列表 -->
+                <div id="filesList" class="files-section" style="display: none;">
+                    <div class="section-header">
+                        <h3><i class="fas fa-file-alt"></i> 我的文件</h3>
+                        <!-- <button class="btn btn-outline" id="refreshFilesBtn">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button> -->
+                    </div>
+                    
+                    <!-- 筛选控件 -->
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label for="customerStatusFilter">处理状态：</label>
+                            <select id="customerStatusFilter" class="filter-select">
+                                <option value="">全部状态</option>
+                                <option value="received">已接收</option>
+                                <option value="processing">处理中</option>
+                                <option value="shipped">已发货</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="customerTimeFilter">上传时间：</label>
+                            <select id="customerTimeFilter" class="filter-select">
+                                <option value="">全部时间</option>
+                                <option value="today">今天</option>
+                                <option value="week">最近一周</option>
+                                <option value="month">最近一月</option>
+                                <option value="custom">自定义时间</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group custom-date-range" id="customerCustomDateRange" style="display: none;">
+                            <label>时间范围：</label>
+                            <input type="date" id="customerStartDate" class="date-input">
+                            <span>至</span>
+                            <input type="date" id="customerEndDate" class="date-input">
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button class="btn btn-primary btn-sm" id="customerApplyFilters">
+                                <i class="fas fa-filter"></i> 筛选
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="customerClearFilters">
+                                <i class="fas fa-times"></i> 清除
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="filesTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>图片</th>
+                                    <th>类型</th>
+                                    <th>大小</th>
+                                    <th>商家</th>
+                                    <th>上传时间</th>
+                                    <th>备注</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination-container" id="filesPagination"></div>
+                    <div id="filesError" class="error-message"></div>
+                </div>
+            </div>
+
+            <!-- 商家面板 -->
+            <div id="merchantDashboard" class="dashboard-content" style="display: none;">
+                <div class="merchant-tabs">
+                    <button class="tab-btn active" data-tab="customers">
+                        <i class="fas fa-users"></i> 客户管理
+                    </button>
+                </div>
+
+                <!-- 客户管理 -->
+                <div id="customersTab" class="tab-content active">
+                    <div class="section-header">
+                        <h3><i class="fas fa-users"></i> 我的客户</h3>
+                        <p class="section-description">管理您的客户</p>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="merchantCustomersTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>客户ID</th>
+                                    <th>用户名</th>
+                                    <th>文件数量</th>
+                                    <th>最近上传</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination-container" id="customersPagination"></div>
+                    <div id="customersError" class="error-message"></div>
+                </div>
+            </div>
+
+            <!-- 客户详情页面 -->
+            <div id="customerDetailDashboard" class="dashboard-content" style="display: none;">
+                <div class="customer-detail-header">
+                    <button class="btn btn-outline" id="backToCustomersBtn">
+                        <i class="fas fa-arrow-left"></i> 返回客户列表
+                    </button>
+                    <h3 id="customerDetailTitle"><i class="fas fa-user"></i> 客户详情</h3>
+                    <div class="batch-download-controls">
+                        <button class="btn btn-success" id="batchDownloadBtn">
+                            <i class="fas fa-download"></i> 批量下载
+                        </button>
+                        <div class="batch-extended-controls" id="batchExtendedControls" style="display: none;">
+                            <button class="btn btn-outline btn-sm" id="selectAllBtn">
+                                <i class="fas fa-check-square"></i> 全选
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="selectNoneBtn">
+                                <i class="fas fa-square"></i> 全不选
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="selectInvertBtn">
+                                <i class="fas fa-exchange-alt"></i> 反选
+                            </button>
+                            <button class="btn btn-primary btn-sm" id="downloadSelectedBtn" disabled>
+                                <i class="fas fa-download"></i> 下载 (<span id="selectedCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="customer-detail-content">
+                    <!-- 筛选控件 -->
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <label for="merchantStatusFilter">处理状态：</label>
+                            <select id="merchantStatusFilter" class="filter-select">
+                                <option value="">全部状态</option>
+                                <option value="received">已接收</option>
+                                <option value="processing">处理中</option>
+                                <option value="shipped">已发货</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label for="merchantTimeFilter">上传时间：</label>
+                            <select id="merchantTimeFilter" class="filter-select">
+                                <option value="">全部时间</option>
+                                <option value="today">今天</option>
+                                <option value="week">最近一周</option>
+                                <option value="month">最近一月</option>
+                                <option value="custom">自定义时间</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group custom-date-range" id="merchantCustomDateRange" style="display: none;">
+                            <label>时间范围：</label>
+                            <input type="date" id="merchantStartDate" class="date-input">
+                            <span>至</span>
+                            <input type="date" id="merchantEndDate" class="date-input">
+                        </div>
+                        
+                        <div class="filter-actions">
+                            <button class="btn btn-primary btn-sm" id="merchantApplyFilters">
+                                <i class="fas fa-filter"></i> 筛选
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="merchantClearFilters">
+                                <i class="fas fa-times"></i> 清除
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 照片列表 -->
+                    <div class="table-container">
+                        <table id="customerPhotosTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-column" id="checkboxHeader" style="display: none;">
+                                        <input type="checkbox" id="selectAllCheckbox">
+                                    </th>
+                                    <th>图片</th>
+                                    <th>类型</th>
+                                    <th>大小</th>
+                                    <th>上传时间</th>
+                                    <th>备注</th>
+                                    <th>处理状态</th>
+                                    <th>下载状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination-container" id="customerPhotosPagination"></div>
+                    <div id="customerPhotosError" class="error-message"></div>
+                </div>
+            </div>
+
+            <!-- 管理员面板 -->
+            <div id="adminDashboard" class="dashboard-content" style="display: none;">
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="users">
+                        <i class="fas fa-users"></i> 用户管理
+                    </button>
+                    <button class="tab-btn" data-tab="logs">
+                        <i class="fas fa-history"></i> 操作记录
+                    </button>
+                    <button class="tab-btn" data-tab="create">
+                        <i class="fas fa-user-plus"></i> 创建用户
+                    </button>
+                </div>
+
+                <!-- 用户管理标签页 -->
+                <div id="usersTab" class="tab-content active">
+                    <div class="section-header">
+                        <h3><i class="fas fa-users"></i> 用户列表</h3>
+                        <div class="user-search-controls">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="userSearchInput" placeholder="搜索用户名..." />
+                                <button class="btn btn-secondary" id="clearUserSearch">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="usersTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>用户名</th>
+                                    <th>角色</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>最后登录</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <!-- 用户管理分页控件 -->
+                    <div id="usersPagination" class="pagination-container">
+                        <!-- 动态生成分页控件 -->
+                    </div>
+                    <div id="usersError" class="error-message"></div>
+                </div>
+
+                <!-- 操作记录标签页 -->
+                <div id="logsTab" class="tab-content">
+                    <div class="logs-header">
+                        <div class="filter-controls">
+                            <div class="searchable-select">
+                                <input type="text" id="userFilterInput" placeholder="搜索用户..." autocomplete="off">
+                                <div id="userFilterDropdown" class="dropdown-menu">
+                                    <div class="dropdown-item" data-value="">所有用户</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" id="searchLogsBtn">
+                                <i class="fas fa-search"></i> 查询
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="logsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>用户</th>
+                                    <th>操作</th>
+                                    <th>详情</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="logsPagination" class="pagination-container">
+                        <!-- 动态生成分页控件 -->
+                    </div>
+                    <div id="logsError" class="error-message"></div>
+                </div>
+
+                <!-- 创建用户标签页 -->
+                <div id="createTab" class="tab-content">
+                    <div class="section-header">
+                        <h3><i class="fas fa-user-plus"></i> 创建新用户</h3>
+                        <p class="section-description" id="createUserDescription">管理员可以创建不同类型的账户。客户请使用注册功能。</p>
+                    </div>
+                    <form id="createUserForm" class="admin-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="newUsername">
+                                    <i class="fas fa-user"></i> 用户名
+                                </label>
+                                <input type="text" id="newUsername" name="username" required 
+                                       placeholder="请输入用户名">
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">
+                                    <i class="fas fa-lock"></i> 密码
+                                </label>
+                                <input type="password" id="newPassword" name="password" required 
+                                       placeholder="请输入密码">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="newUserRole">
+                                <i class="fas fa-user-tag"></i> 角色
+                            </label>
+                            <select id="newUserRole" name="role" required>
+                                <option value="customer">客户</option>
+                                <option value="merchant">商家</option>
+                                <option value="sub_admin">子管理员</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> 创建用户
+                        </button>
+                    </form>
+                    <div id="createUserError" class="error-message"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>加载中...</p>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirmTitle">确认操作</h3>
+            <p id="confirmMessage">您确定要执行此操作吗？</p>
+            <div id="confirmReason" class="form-group" style="display: none;">
+                <label for="reasonInput">禁用理由：</label>
+                <textarea id="reasonInput" placeholder="请输入禁用理由" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="cancelConfirmBtn">取消</button>
+                <button id="confirmBtn" class="btn btn-primary">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

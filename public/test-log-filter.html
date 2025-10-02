@@ -1,0 +1,263 @@
+<!--
+/**
+ * 文件名: test-log-filter.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 操作日志筛选功能测试页面，验证日志查询和筛选功能
+ * 
+ * 测试功能:
+ * - 用户操作日志查询
+ * - 日志筛选条件测试
+ * - 权限控制验证
+ * - 分页显示测试
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建日志筛选测试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作记录筛选测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        select { margin: 5px; padding: 8px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>操作记录筛选功能测试</h1>
+    
+    <div class="test-section">
+        <h2>🔑 登录测试</h2>
+        <button onclick="loginAsSubAdmin()">登录为子管理员</button>
+        <button onclick="loginAsAdmin()">登录为主管理员</button>
+        <div id="loginResult" class="result">点击按钮登录...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>👥 获取用户列表</h2>
+        <button onclick="loadUsers()">加载用户列表</button>
+        <div id="usersResult" class="result">需要先登录</div>
+        <select id="userSelect">
+            <option value="">请先加载用户列表</option>
+        </select>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 操作记录测试</h2>
+        <button onclick="getAllLogs()">获取所有记录</button>
+        <button onclick="getSelectedUserLogs()">获取选中用户记录</button>
+        <div id="logsResult" class="result">需要先登录</div>
+        
+        <h3>操作记录列表</h3>
+        <table id="logsTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>用户</th>
+                    <th>角色</th>
+                    <th>操作</th>
+                    <th>详情</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        let authToken = null;
+        let currentRole = null;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+
+        async function loginAsSubAdmin() {
+            try {
+                // 假设已经有子管理员账户 gly111
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'gly111', password: '123456' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    showResult('loginResult', `✅ 子管理员登录成功！<br>用户: ${data.user.username}<br>角色: ${data.user.role}`, 'success');
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function loginAsAdmin() {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    showResult('loginResult', `✅ 主管理员登录成功！<br>用户: ${data.user.username}<br>角色: ${data.user.role}`, 'success');
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadUsers() {
+            if (!authToken) {
+                showResult('usersResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const select = document.getElementById('userSelect');
+                    select.innerHTML = '<option value="">所有用户</option>';
+                    
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.username} (${user.role}) - ID: ${user.id}`;
+                        select.appendChild(option);
+                    });
+                    
+                    showResult('usersResult', 
+                        `✅ 加载用户成功！<br>当前角色: ${currentRole}<br>可见用户数: ${data.users.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('usersResult', `❌ 加载失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('usersResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function getAllLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                showResult('logsResult', '正在获取所有操作记录...', 'info');
+                
+                const response = await fetch('/api/admin/logs', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    displayLogs(data.logs);
+                    showResult('logsResult', 
+                        `✅ 获取所有记录成功！<br>当前角色: ${currentRole}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function getSelectedUserLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            const userId = document.getElementById('userSelect').value;
+            if (!userId) {
+                showResult('logsResult', '❌ 请选择一个用户', 'error');
+                return;
+            }
+
+            try {
+                const selectedOption = document.getElementById('userSelect').selectedOptions[0];
+                const userName = selectedOption.textContent;
+                
+                showResult('logsResult', `正在获取用户 ${userName} 的操作记录...`, 'info');
+                
+                const response = await fetch(`/api/admin/logs/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    displayLogs(data.logs);
+                    showResult('logsResult', 
+                        `✅ 获取用户记录成功！<br>用户: ${userName}<br>当前角色: ${currentRole}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        function displayLogs(logs) {
+            const tbody = document.querySelector('#logsTable tbody');
+            tbody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" style="text-align: center;">没有找到操作记录</td>';
+                tbody.appendChild(row);
+                return;
+            }
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                const time = new Date(log.timestamp).toLocaleString('zh-CN');
+                const userRole = log.user_role || '未知';
+                
+                row.innerHTML = `
+                    <td>${time}</td>
+                    <td>${log.username || '未知用户'}</td>
+                    <td>${userRole}</td>
+                    <td>${log.operation}</td>
+                    <td>${log.details || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 页面加载时的提示
+        document.addEventListener('DOMContentLoaded', () => {
+            showResult('loginResult', '请先登录测试账户。如果没有子管理员账户，请先用主管理员创建一个。', 'info');
+        });
+    </script>
+</body>
+</html>

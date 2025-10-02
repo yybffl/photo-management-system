@@ -1,0 +1,169 @@
+<!--
+/**
+ * 文件名: test.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 基础API连接测试页面，验证前后端通信功能
+ * 
+ * 测试内容:
+ * - API端点连通性测试
+ * - 用户认证功能测试
+ * - 数据传输格式验证
+ * - 错误响应处理测试
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建基础API测试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        button { margin: 5px; padding: 10px 15px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>用户管理系统 - 测试页面</h1>
+    
+    <div class="test-section">
+        <h2>API 连接测试</h2>
+        <button onclick="testLogin()">测试登录 API</button>
+        <button onclick="testProfile()">测试用户信息 API</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>前端功能测试</h2>
+        <button onclick="testLocalStorage()">测试本地存储</button>
+        <button onclick="testConsole()">测试控制台输出</button>
+        <div id="frontendResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>快速登录</h2>
+        <button onclick="quickLogin()">使用管理员账户登录</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        async function testLogin() {
+            const result = document.getElementById('apiResult');
+            result.innerHTML = '测试登录 API...';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    result.innerHTML = `✅ 登录成功！<br>令牌: ${data.token.substring(0, 20)}...<br>用户: ${data.user.username} (${data.user.role})`;
+                } else {
+                    result.innerHTML = `❌ 登录失败: ${data.error}`;
+                }
+            } catch (error) {
+                result.innerHTML = `❌ 网络错误: ${error.message}`;
+            }
+        }
+
+        async function testProfile() {
+            const result = document.getElementById('apiResult');
+            
+            if (!authToken) {
+                result.innerHTML = '❌ 请先测试登录获取令牌';
+                return;
+            }
+            
+            result.innerHTML = '测试用户信息 API...';
+            
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `✅ 获取用户信息成功！<br>用户: ${JSON.stringify(data.user, null, 2)}`;
+                } else {
+                    result.innerHTML = `❌ 获取用户信息失败: ${data.error}`;
+                }
+            } catch (error) {
+                result.innerHTML = `❌ 网络错误: ${error.message}`;
+            }
+        }
+
+        function testLocalStorage() {
+            const result = document.getElementById('frontendResult');
+            
+            try {
+                // 测试存储
+                localStorage.setItem('test', 'hello');
+                const value = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                
+                result.innerHTML = `✅ 本地存储正常工作！测试值: ${value}`;
+            } catch (error) {
+                result.innerHTML = `❌ 本地存储错误: ${error.message}`;
+            }
+        }
+
+        function testConsole() {
+            const result = document.getElementById('frontendResult');
+            
+            console.log('这是一条测试日志');
+            console.error('这是一条测试错误日志');
+            
+            result.innerHTML = '✅ 控制台输出测试完成，请查看浏览器开发者工具的控制台';
+        }
+
+        async function quickLogin() {
+            const result = document.getElementById('loginResult');
+            result.innerHTML = '正在登录...';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    result.innerHTML = '✅ 登录成功！令牌已保存到本地存储。<br><a href="/">点击这里进入主系统</a>';
+                } else {
+                    result.innerHTML = `❌ 登录失败: ${data.error}`;
+                }
+            } catch (error) {
+                result.innerHTML = `❌ 网络错误: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

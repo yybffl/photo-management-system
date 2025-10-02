@@ -1,0 +1,380 @@
+<!--
+/**
+ * 文件名: debug.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 前端调试页面，用于测试和诊断前端JavaScript功能
+ * 
+ * 调试功能:
+ * 1. 事件绑定测试 - 验证所有按钮和表单事件是否正确绑定
+ * 2. API连接测试 - 测试与后端API的连接状态
+ * 3. 功能模块测试 - 独立测试各个功能模块
+ * 4. 错误诊断 - 捕获和显示JavaScript错误信息
+ * 5. 性能监控 - 监控页面加载和响应时间
+ * 
+ * 使用场景:
+ * - 开发阶段功能验证
+ * - 生产环境问题排查
+ * - 用户反馈问题重现
+ * - 新功能测试验证
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建调试页面，实现基础功能测试
+ * - 2025/10/02: 添加事件绑定和API连接测试
+ * - 2025/10/02: 优化错误显示和日志记录功能
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试页面 - 用户管理系统</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; font-family: monospace; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>用户管理系统 - 调试页面</h1>
+    
+    <div class="debug-section">
+        <h2>🔍 系统诊断</h2>
+        <button onclick="checkJavaScript()">检查JavaScript</button>
+        <button onclick="checkLocalStorage()">检查本地存储</button>
+        <button onclick="checkConsole()">检查控制台</button>
+        <button onclick="checkDOM()">检查DOM元素</button>
+        <div id="diagnostics"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🌐 网络测试</h2>
+        <button onclick="testServerConnection()">测试服务器连接</button>
+        <button onclick="testLoginAPI()">测试登录API</button>
+        <button onclick="testAdminAPI()">测试管理员API</button>
+        <div id="networkTests"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🎯 事件测试</h2>
+        <button onclick="testButtonClick()" id="testBtn">测试按钮点击</button>
+        <button onclick="testFormSubmit()">测试表单提交</button>
+        <button onclick="testEventBinding()">测试事件绑定</button>
+        <div id="eventTests"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🚀 快速操作</h2>
+        <button onclick="quickLogin()">快速登录</button>
+        <button onclick="clearStorage()">清除存储</button>
+        <button onclick="goToMain()">进入主系统</button>
+        <div id="quickActions"></div>
+    </div>
+
+    <script>
+        let debugLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            debugLog.push(logEntry);
+            console.log(logEntry);
+            
+            // 显示在页面上
+            const container = document.getElementById('diagnostics');
+            if (container) {
+                const div = document.createElement('div');
+                div.className = `log ${type}`;
+                div.textContent = logEntry;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function checkJavaScript() {
+            log('开始JavaScript检查...', 'info');
+            
+            try {
+                // 检查基本JavaScript功能
+                const testObj = { test: 'value' };
+                const testArray = [1, 2, 3];
+                const testFunc = () => 'hello';
+                
+                log('✓ 对象创建正常', 'success');
+                log('✓ 数组创建正常', 'success');
+                log('✓ 函数创建正常', 'success');
+                
+                // 检查ES6功能
+                const [first] = testArray;
+                const { test } = testObj;
+                log('✓ ES6解构赋值正常', 'success');
+                
+                // 检查异步功能
+                Promise.resolve('test').then(() => {
+                    log('✓ Promise功能正常', 'success');
+                });
+                
+                log('JavaScript检查完成', 'success');
+                
+            } catch (error) {
+                log(`❌ JavaScript错误: ${error.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            log('开始本地存储检查...', 'info');
+            
+            try {
+                // 测试localStorage
+                localStorage.setItem('debug_test', 'test_value');
+                const value = localStorage.getItem('debug_test');
+                localStorage.removeItem('debug_test');
+                
+                if (value === 'test_value') {
+                    log('✓ localStorage功能正常', 'success');
+                } else {
+                    log('❌ localStorage读取失败', 'error');
+                }
+                
+                // 检查现有的authToken
+                const authToken = localStorage.getItem('authToken');
+                if (authToken) {
+                    log(`✓ 发现authToken: ${authToken.substring(0, 20)}...`, 'success');
+                } else {
+                    log('⚠ 未发现authToken', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ 本地存储错误: ${error.message}`, 'error');
+            }
+        }
+
+        function checkConsole() {
+            log('开始控制台检查...', 'info');
+            
+            console.log('这是一条测试日志');
+            console.warn('这是一条测试警告');
+            console.error('这是一条测试错误（可忽略）');
+            
+            log('✓ 控制台输出正常，请查看浏览器开发者工具', 'success');
+        }
+
+        function checkDOM() {
+            log('开始DOM检查...', 'info');
+            
+            try {
+                // 检查基本DOM操作
+                const testDiv = document.createElement('div');
+                testDiv.textContent = 'test';
+                log('✓ DOM元素创建正常', 'success');
+                
+                // 检查querySelector
+                const body = document.querySelector('body');
+                if (body) {
+                    log('✓ querySelector功能正常', 'success');
+                } else {
+                    log('❌ querySelector失败', 'error');
+                }
+                
+                // 检查事件监听
+                const testBtn = document.getElementById('testBtn');
+                if (testBtn) {
+                    log('✓ getElementById功能正常', 'success');
+                } else {
+                    log('❌ getElementById失败', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ DOM操作错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testServerConnection() {
+            const container = document.getElementById('networkTests');
+            container.innerHTML = '';
+            
+            log('测试服务器连接...', 'info');
+            
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    log('✓ 服务器连接正常', 'success');
+                } else {
+                    log(`❌ 服务器响应错误: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 服务器连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoginAPI() {
+            const container = document.getElementById('networkTests');
+            
+            log('测试登录API...', 'info');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✓ 登录API正常', 'success');
+                    log(`令牌: ${data.token.substring(0, 30)}...`, 'info');
+                    window.debugToken = data.token;
+                } else {
+                    log(`❌ 登录API失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 登录API网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAdminAPI() {
+            const container = document.getElementById('networkTests');
+            
+            if (!window.debugToken) {
+                log('⚠ 请先测试登录API获取令牌', 'warning');
+                return;
+            }
+            
+            log('测试管理员API...', 'info');
+            
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${window.debugToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✓ 管理员API正常，用户数量: ${data.users.length}`, 'success');
+                } else {
+                    log(`❌ 管理员API失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 管理员API网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        function testButtonClick() {
+            const container = document.getElementById('eventTests');
+            container.innerHTML = '';
+            
+            log('✓ 按钮点击事件正常工作！', 'success');
+        }
+
+        function testFormSubmit() {
+            const container = document.getElementById('eventTests');
+            
+            log('测试表单提交...', 'info');
+            
+            // 创建测试表单
+            const form = document.createElement('form');
+            form.innerHTML = '<input type="text" value="test">';
+            
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                log('✓ 表单提交事件正常工作！', 'success');
+            });
+            
+            // 模拟提交
+            form.dispatchEvent(new Event('submit'));
+        }
+
+        function testEventBinding() {
+            const container = document.getElementById('eventTests');
+            
+            log('测试事件绑定...', 'info');
+            
+            try {
+                // 测试addEventListener
+                const testElement = document.createElement('button');
+                testElement.addEventListener('click', () => {
+                    log('✓ addEventListener正常工作！', 'success');
+                });
+                
+                // 模拟点击
+                testElement.click();
+                
+                // 测试onclick
+                const testElement2 = document.createElement('button');
+                testElement2.onclick = () => {
+                    log('✓ onclick正常工作！', 'success');
+                };
+                
+                testElement2.click();
+                
+            } catch (error) {
+                log(`❌ 事件绑定错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function quickLogin() {
+            const container = document.getElementById('quickActions');
+            container.innerHTML = '';
+            
+            log('执行快速登录...', 'info');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    log('✓ 快速登录成功，令牌已保存', 'success');
+                } else {
+                    log(`❌ 快速登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 快速登录网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            const container = document.getElementById('quickActions');
+            container.innerHTML = '';
+            
+            localStorage.clear();
+            log('✓ 本地存储已清除', 'success');
+        }
+
+        function goToMain() {
+            log('跳转到主系统...', 'info');
+            window.location.href = '/';
+        }
+
+        // 页面加载完成后自动运行基本检查
+        document.addEventListener('DOMContentLoaded', () => {
+            log('调试页面加载完成', 'success');
+            log('点击上方按钮开始诊断', 'info');
+        });
+    </script>
+</body>
+</html>

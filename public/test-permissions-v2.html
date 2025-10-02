@@ -1,0 +1,327 @@
+<!--
+/**
+ * 文件名: test-permissions-v2.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 权限系统优化版本测试页面，测试改进后的权限控制规则
+ * 
+ * 测试内容:
+ * - 细化权限控制测试
+ * - 操作日志查看权限
+ * - 用户管理权限范围
+ * - 数据访问权限验证
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建权限系统优化版本测试
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限测试 v2.0</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f2f2f2; }
+        .permission-table { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>操作记录权限测试 v2.0</h1>
+    
+    <div class="test-section">
+        <h2>📋 权限规则说明</h2>
+        <table class="permission-table">
+            <thead>
+                <tr>
+                    <th>角色</th>
+                    <th>可查看的操作记录</th>
+                    <th>说明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>主管理员</strong></td>
+                    <td>自身 + 所有子管理员 + 所有商家 + 所有客户</td>
+                    <td>完全权限，可查看所有人的记录</td>
+                </tr>
+                <tr>
+                    <td><strong>子管理员</strong></td>
+                    <td>自身 + 所有商家 + 所有客户</td>
+                    <td>不能查看主管理员和其他子管理员的记录</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔑 登录测试</h2>
+        <button onclick="loginAsAdmin()">登录为主管理员</button>
+        <button onclick="loginAsSubAdmin()">登录为子管理员</button>
+        <div id="loginResult" class="result">点击按钮登录...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>👥 用户列表测试</h2>
+        <button onclick="testGetUsers()">获取用户列表</button>
+        <div id="usersResult" class="result">需要先登录</div>
+        <div id="usersList"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 操作记录权限测试</h2>
+        <button onclick="testGetAllLogs()">获取所有可见记录</button>
+        <button onclick="testGetAdminLogs()">尝试查看主管理员记录</button>
+        <button onclick="testGetSubAdminLogs()">尝试查看子管理员记录</button>
+        <button onclick="testGetSelfLogs()">查看自己的记录</button>
+        <div id="logsResult" class="result">需要先登录</div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let currentRole = null;
+        let currentUserId = null;
+        let availableUsers = [];
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+
+        async function loginAsAdmin() {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    currentUserId = data.user.id;
+                    showResult('loginResult', 
+                        `✅ 主管理员登录成功！<br>用户: ${data.user.username}<br>角色: ${data.user.role}<br>ID: ${data.user.id}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function loginAsSubAdmin() {
+            try {
+                // 假设子管理员用户名是 gly111
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'gly111', password: '123456' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    currentUserId = data.user.id;
+                    showResult('loginResult', 
+                        `✅ 子管理员登录成功！<br>用户: ${data.user.username}<br>角色: ${data.user.role}<br>ID: ${data.user.id}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}<br>请确保子管理员账户 gly111 存在`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetUsers() {
+            if (!authToken) {
+                showResult('usersResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    availableUsers = data.users;
+                    
+                    let userListHtml = '<table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th></tr></thead><tbody>';
+                    data.users.forEach(user => {
+                        userListHtml += `<tr>
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${user.role}</td>
+                            <td>${user.status}</td>
+                        </tr>`;
+                    });
+                    userListHtml += '</tbody></table>';
+                    
+                    document.getElementById('usersList').innerHTML = userListHtml;
+                    
+                    showResult('usersResult', 
+                        `✅ 获取用户列表成功！<br>当前角色: ${currentRole}<br>可见用户数: ${data.users.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('usersResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('usersResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetAllLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/logs', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const roleCount = {};
+                    data.logs.forEach(log => {
+                        const role = log.user_role || '未知';
+                        roleCount[role] = (roleCount[role] || 0) + 1;
+                    });
+                    
+                    const roleStats = Object.entries(roleCount)
+                        .map(([role, count]) => `${role}: ${count}条`)
+                        .join('<br>');
+                    
+                    showResult('logsResult', 
+                        `✅ 获取所有记录成功！<br>当前角色: ${currentRole}<br>总记录数: ${data.logs.length}<br>按角色统计:<br>${roleStats}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetAdminLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                // 尝试查看主管理员(ID=1)的记录
+                const response = await fetch('/api/admin/logs/1', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('logsResult', 
+                        `✅ 查看主管理员记录成功！<br>当前角色: ${currentRole}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    const expectedError = currentRole === 'sub_admin';
+                    showResult('logsResult', 
+                        `${expectedError ? '✅ 权限限制正常' : '❌ 意外的权限错误'}！<br>当前角色: ${currentRole}<br>错误: ${data.error}`, 
+                        expectedError ? 'success' : 'error'
+                    );
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetSubAdminLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            // 找到一个子管理员用户
+            const subAdmin = availableUsers.find(u => u.role === 'sub_admin' && u.id != currentUserId);
+            if (!subAdmin) {
+                showResult('logsResult', '❌ 没有找到其他子管理员用户进行测试', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/logs/${subAdmin.id}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('logsResult', 
+                        `✅ 查看子管理员记录成功！<br>当前角色: ${currentRole}<br>目标: ${subAdmin.username}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    const expectedError = currentRole === 'sub_admin';
+                    showResult('logsResult', 
+                        `${expectedError ? '✅ 权限限制正常' : '❌ 意外的权限错误'}！<br>当前角色: ${currentRole}<br>目标: ${subAdmin.username}<br>错误: ${data.error}`, 
+                        expectedError ? 'success' : 'error'
+                    );
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetSelfLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/logs/${currentUserId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('logsResult', 
+                        `✅ 查看自己记录成功！<br>当前角色: ${currentRole}<br>用户ID: ${currentUserId}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', 
+                        `❌ 查看自己记录失败！<br>当前角色: ${currentRole}<br>错误: ${data.error}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载提示
+        document.addEventListener('DOMContentLoaded', () => {
+            showResult('loginResult', '请先登录测试账户，然后测试不同角色的权限差异。', 'info');
+        });
+    </script>
+</body>
+</html>

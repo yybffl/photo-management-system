@@ -1,0 +1,315 @@
+<!--
+/**
+ * 文件名: test-permissions.html
+ * 创建时间: 2025年10月2日
+ * 文件内容: 用户权限系统测试页面，验证角色权限控制功能
+ * 
+ * 测试权限:
+ * - 主管理员权限测试
+ * - 子管理员权限测试
+ * - 商家用户权限测试
+ * - 客户用户权限测试
+ * 
+ * 修改记录:
+ * - 2025/10/02: 创建权限系统测试页面
+ * - 2025/10/02: 添加文件说明注释
+ */
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #fff; border-left: 4px solid #007bff; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>权限控制测试</h1>
+    
+    <div class="test-section">
+        <h2>🔑 登录测试</h2>
+        <button onclick="loginAsAdmin()">登录为主管理员</button>
+        <button onclick="createSubAdmin()">创建子管理员</button>
+        <button onclick="loginAsSubAdmin()">登录为子管理员</button>
+        <div id="loginResult" class="result">点击按钮开始测试...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>👥 用户列表权限测试</h2>
+        <button onclick="testGetUsers()">获取用户列表</button>
+        <div id="usersResult" class="result">需要先登录</div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 操作记录权限测试</h2>
+        <button onclick="testGetAllLogs()">获取所有操作记录</button>
+        <button onclick="testGetAdminLogs()">尝试查看管理员记录</button>
+        <div id="logsResult" class="result">需要先登录</div>
+    </div>
+
+    <div class="test-section">
+        <h2>➕ 创建用户权限测试</h2>
+        <button onclick="testCreateMerchant()">创建商家</button>
+        <button onclick="testCreateSubAdmin()">尝试创建子管理员</button>
+        <div id="createResult" class="result">需要先登录</div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let currentRole = null;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+
+        async function loginAsAdmin() {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    showResult('loginResult', `✅ 主管理员登录成功！<br>角色: ${data.user.role}`, 'success');
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function createSubAdmin() {
+            if (!authToken) {
+                showResult('loginResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const username = 'subadmin' + Date.now();
+                const response = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: '123456',
+                        role: 'sub_admin'
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    window.subAdminUsername = username;
+                    showResult('loginResult', `✅ 子管理员创建成功！<br>用户名: ${username}<br>密码: 123456`, 'success');
+                } else {
+                    showResult('loginResult', `❌ 创建失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function loginAsSubAdmin() {
+            if (!window.subAdminUsername) {
+                showResult('loginResult', '❌ 请先创建子管理员', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: window.subAdminUsername, 
+                        password: '123456' 
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    authToken = data.token;
+                    currentRole = data.user.role;
+                    showResult('loginResult', `✅ 子管理员登录成功！<br>角色: ${data.user.role}`, 'success');
+                } else {
+                    showResult('loginResult', `❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('loginResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetUsers() {
+            if (!authToken) {
+                showResult('usersResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const userList = data.users.map(u => `${u.username} (${u.role})`).join('<br>');
+                    showResult('usersResult', 
+                        `✅ 获取用户列表成功！<br>当前角色: ${currentRole}<br>可见用户数: ${data.users.length}<br>${userList}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('usersResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('usersResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetAllLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/logs', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    const logCount = data.logs.length;
+                    const recentLogs = data.logs.slice(0, 3).map(log => 
+                        `${log.username || '未知'} - ${log.operation}`
+                    ).join('<br>');
+                    showResult('logsResult', 
+                        `✅ 获取操作记录成功！<br>当前角色: ${currentRole}<br>记录数: ${logCount}<br>最近3条:<br>${recentLogs}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', `❌ 获取失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetAdminLogs() {
+            if (!authToken) {
+                showResult('logsResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                // 尝试查看管理员(ID=1)的操作记录
+                const response = await fetch('/api/admin/logs/1', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('logsResult', 
+                        `✅ 查看管理员记录成功！<br>当前角色: ${currentRole}<br>记录数: ${data.logs.length}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('logsResult', 
+                        `❌ 权限限制正常！<br>当前角色: ${currentRole}<br>错误: ${data.error}`, 
+                        'success'
+                    );
+                }
+            } catch (error) {
+                showResult('logsResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateMerchant() {
+            if (!authToken) {
+                showResult('createResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const username = 'merchant' + Date.now();
+                const response = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: '123456',
+                        role: 'merchant'
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('createResult', 
+                        `✅ 创建商家成功！<br>当前角色: ${currentRole}<br>用户名: ${username}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('createResult', `❌ 创建失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('createResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateSubAdmin() {
+            if (!authToken) {
+                showResult('createResult', '❌ 请先登录', 'error');
+                return;
+            }
+
+            try {
+                const username = 'testsubadmin' + Date.now();
+                const response = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: '123456',
+                        role: 'sub_admin'
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showResult('createResult', 
+                        `✅ 创建子管理员成功！<br>当前角色: ${currentRole}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('createResult', 
+                        `❌ 权限限制正常！<br>当前角色: ${currentRole}<br>错误: ${data.error}`, 
+                        'success'
+                    );
+                }
+            } catch (error) {
+                showResult('createResult', `❌ 网络错误: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
