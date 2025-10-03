@@ -93,21 +93,29 @@ const loginLimiter = rateLimit({
   message: { error: '登录尝试次数过多，请15分钟后再试' }
 });
 
-// 确保临时上传目录存在
+// 确保临时上传目录存在（Vercel环境跳过）
 const tempUploadDir = './temp-uploads';
-try {
-  fs.ensureDirSync(tempUploadDir);
-  console.log(`临时上传目录已准备: ${path.resolve(tempUploadDir)}`);
-} catch (error) {
-  console.error('临时上传目录准备失败:', error);
-  process.exit(1);
+
+// 在Vercel环境中跳过目录创建
+if (process.env.VERCEL !== '1') {
+  try {
+    fs.ensureDirSync(tempUploadDir);
+    console.log(`临时上传目录已准备: ${path.resolve(tempUploadDir)}`);
+  } catch (error) {
+    console.error('临时上传目录准备失败:', error);
+    process.exit(1);
+  }
+} else {
+  console.log('Vercel环境，跳过临时上传目录创建');
 }
 
-// 配置multer文件上传（临时存储）
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, tempUploadDir);
-  },
+// 配置multer文件上传（Vercel环境使用内存存储）
+const storage = process.env.VERCEL === '1' 
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, tempUploadDir);
+      },
   filename: function (req, file, cb) {
     try {
       const timestamp = Date.now();
