@@ -4,7 +4,7 @@
   "description": "客户端登录注册系统",
   "main": "server.js",
   "scripts": {
-    "start": "node server-cloud.js",
+    "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node scripts/initDatabase.js"
   },
