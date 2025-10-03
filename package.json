@@ -23,7 +23,8 @@
     "node-fetch": "^3.3.2",
     "path": "^0.12.7",
     "sqlite3": "^5.1.6",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "aws-sdk": "^2.1490.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
